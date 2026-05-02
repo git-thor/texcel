@@ -1,0 +1,45 @@
+[project]
+name = "texcel"
+version = "0.1.0"
+description = "Convert Excel tables to LaTeX format with math preservation and readability features"
+readme = "README.md"
+requires-python = ">=3.13"
+license = "MIT"
+authors = [
+    { name = "Thomas Rudolf", email = "thomas.rudolf@kit.edu" }
+]
+keywords = [
+    "excel",
+    "latex",
+    "table",
+    "conversion",
+    "tabular",
+    "tabularx",
+    "academic-publishing",
+    "scientific-writing",
+]
+dependencies = [
+    "openpyxl>=3.1.0",
+    "pandas>=2.0.0",
+]
+
+[project.scripts]
+excel2latex = "excel_to_latex:main"
+latex2excel = "latex_to_excel:main"
+texcel = "excel_to_latex:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.5",
+    "ruff>=0.15.12",
+]
+
+[tool.uv]
+package = true
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]
