@@ -271,4 +271,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 -   The LaTeX community for excellent documentation and packages
 -   OpenPyXL for Excel file handling
 -   Pandas for data manipulation
--   Academic publishing community for feedback and testing
