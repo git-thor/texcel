@@ -371,8 +371,62 @@ def unescape_latex(text: str) -> str:
     for old, new in replacements:
         text = text.replace(old, new)
 
+    # Convert Unicode Greek letters to LaTeX commands BEFORE removing other commands
+    greek_to_latex: List[Tuple[str, str]] = [
+        ("α", "\\alpha"),
+        ("β", "\\beta"),
+        ("γ", "\\gamma"),
+        ("δ", "\\delta"),
+        ("ε", "\\epsilon"),
+        ("ζ", "\\zeta"),
+        ("η", "\\eta"),
+        ("θ", "\\theta"),
+        ("ι", "\\iota"),
+        ("κ", "\\kappa"),
+        ("λ", "\\lambda"),
+        ("μ", "\\mu"),
+        ("ν", "\\nu"),
+        ("ξ", "\\xi"),
+        ("π", "\\pi"),
+        ("ρ", "\\rho"),
+        ("σ", "\\sigma"),
+        ("ς", "\\varsigma"),
+        ("τ", "\\tau"),
+        ("υ", "\\upsilon"),
+        ("φ", "\\phi"),
+        ("χ", "\\chi"),
+        ("ψ", "\\psi"),
+        ("ω", "\\omega"),
+        ("Α", "\\Alpha"),
+        ("Β", "\\Beta"),
+        ("Γ", "\\Gamma"),
+        ("Δ", "\\Delta"),
+        ("Ε", "\\Epsilon"),
+        ("Ζ", "\\Zeta"),
+        ("Η", "\\Eta"),
+        ("Θ", "\\Theta"),
+        ("Ι", "\\Iota"),
+        ("Κ", "\\Kappa"),
+        ("Λ", "\\Lambda"),
+        ("Μ", "\\Mu"),
+        ("Ν", "\\Nu"),
+        ("Ξ", "\\Xi"),
+        ("Π", "\\Pi"),
+        ("Ρ", "\\Rho"),
+        ("Σ", "\\Sigma"),
+        ("Τ", "\\Tau"),
+        ("Υ", "\\Upsilon"),
+        ("Φ", "\\Phi"),
+        ("Χ", "\\Chi"),
+        ("Ψ", "\\Psi"),
+        ("Ω", "\\Omega"),
+    ]
+
+    for old, new in greek_to_latex:
+        text = text.replace(old, new)
+
     # Remove remaining LaTeX commands (like \\raggedright, \\centering, etc.)
-    # BUT preserve math commands inside $...$
+    # BUT preserve math commands inside $...$ and Greek letter commands
     # First, extract math content
     math_parts: List[str] = []
     math_pattern = r"\$([^\$]+)\$"
@@ -383,8 +437,22 @@ def unescape_latex(text: str) -> str:
 
     text = re.sub(math_pattern, save_math, text)
 
+    # Extract Greek letter LaTeX commands to preserve them
+    greek_placeholders: List[str] = []
+
+    def save_greek(match: re.Match) -> str:
+        greek_placeholders.append(match.group(0))
+        return f"__GREEK_{len(greek_placeholders) - 1}__"
+
+    greek_pattern = r"\\(alpha|beta|gamma|delta|epsilon|zeta|eta|theta|iota|kappa|lambda|mu|nu|xi|pi|rho|sigma|varsigma|tau|upsilon|phi|chi|psi|omega|Alpha|Beta|Gamma|Delta|Epsilon|Zeta|Eta|Theta|Iota|Kappa|Lambda|Mu|Nu|Xi|Pi|Rho|Sigma|Tau|Upsilon|Phi|Chi|Psi|Omega)"
+    text = re.sub(greek_pattern, save_greek, text)
+
     # Remove other LaTeX commands
     text = re.sub(r"\\[a-zA-Z]+", "", text)
+
+    # Restore Greek commands
+    for i, placeholder in enumerate(greek_placeholders):
+        text = text.replace(f"__GREEK_{i}__", placeholder)
 
     # Restore math parts
     for i, math_part in enumerate(math_parts):

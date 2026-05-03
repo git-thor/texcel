@@ -427,7 +427,9 @@ class TestPercentHandling:
         assert r"\%" in latex_content, "% should be escaped as \\% in LaTeX"
         # Should not have unescaped %
         lines_with_percent = [
-            l for l in latex_content.split("\n") if "%" in l and r"\%" not in l  # noqa: E741
+            l
+            for l in latex_content.split("\n")  # noqa: E741
+            if "%" in l and r"\%" not in l
         ]
         assert len(lines_with_percent) == 0, f"Found unescaped %: {lines_with_percent}"
 
@@ -536,6 +538,123 @@ class TestUnescapeLatex:
         """Math mode content should be preserved"""
         result = unescape_latex(r"Test $\alpha=0$")
         assert "$" in result or r"\alpha" in result
+
+
+class TestUnicodeGreekLetters:
+    """Test: Convert Unicode Greek letters to LaTeX commands"""
+
+    def test_unicode_tau_to_latex_tau(self, test_dir):
+        """Unicode τ in Excel should become \\tau in LaTeX"""
+        excel_path = test_dir / "unicode_tau.xlsx"
+        wb = Workbook()
+        ws = wb.active
+        ws.cell(row=1, column=1, value="τ")
+        ws.cell(row=1, column=2, value="τ_I")
+        ws.cell(row=1, column=3, value=r"$\tau$")
+        wb.save(excel_path)
+        wb.close()
+
+        latex_path = test_dir / "unicode_tau.tex"
+        excel_to_latex(
+            excel_path=str(excel_path),
+            output_path=str(latex_path),
+            escape_special_chars=False,
+        )
+
+        latex_content = latex_path.read_text()
+        # Unicode τ should be converted to \tau
+        assert r"\tau" in latex_content, (
+            f"Unicode τ should become \\tau: {latex_content}"
+        )
+
+    def test_unicode_greek_letters_roundtrip(self, test_dir):
+        """Unicode Greek letters should survive roundtrip"""
+        excel_path = test_dir / "unicode_greek.xlsx"
+        wb = Workbook()
+        ws = wb.active
+        ws.cell(row=1, column=1, value="α")
+        ws.cell(row=1, column=2, value="β")
+        ws.cell(row=1, column=3, value="γ")
+        ws.cell(row=1, column=4, value="δ")
+        ws.cell(row=1, column=5, value="τ")
+        wb.save(excel_path)
+        wb.close()
+
+        latex_path = test_dir / "unicode_greek.tex"
+        excel_roundtrip = test_dir / "unicode_greek2.xlsx"
+
+        excel_to_latex(
+            excel_path=str(excel_path),
+            output_path=str(latex_path),
+            escape_special_chars=False,
+        )
+
+        latex_to_excel(
+            latex_path=str(latex_path),
+            output_path=str(excel_roundtrip),
+        )
+
+        wb_round = load_workbook(str(excel_roundtrip), data_only=True)
+        ws_round = wb_round.active
+
+        # All should be converted to LaTeX commands
+        assert r"\alpha" in str(ws_round.cell(row=1, column=1).value)
+        assert r"\beta" in str(ws_round.cell(row=1, column=2).value)
+        assert r"\gamma" in str(ws_round.cell(row=1, column=3).value)
+        assert r"\delta" in str(ws_round.cell(row=1, column=4).value)
+        assert r"\tau" in str(ws_round.cell(row=1, column=5).value)
+
+        wb_round.close()
+
+    def test_latex_to_excel_unicode_greek(self, test_dir):
+        """Unicode Greek letters in LaTeX should become LaTeX commands in Excel"""
+        latex_content = r"""
+\begin{table}
+\begin{tabular}{cc}
+\toprule
+τ & α \\
+γ & β \\
+\bottomrule
+\end{tabular}
+\end{table}
+"""
+        latex_path = test_dir / "unicode_latex.tex"
+        latex_path.write_text(latex_content)
+
+        excel_path = test_dir / "unicode_latex.xlsx"
+        latex_to_excel(
+            latex_path=str(latex_path),
+            output_path=str(excel_path),
+        )
+
+        wb = load_workbook(str(excel_path), data_only=True)
+        ws = wb.active
+
+        # Unicode should be converted to LaTeX commands
+        assert ws.cell(row=1, column=1).value == r"\tau"
+        assert ws.cell(row=1, column=2).value == r"\alpha"
+        assert ws.cell(row=2, column=1).value == r"\gamma"
+        assert ws.cell(row=2, column=2).value == r"\beta"
+        wb.close()
+
+    def test_unescape_unicode_greek_letters(self):
+        """Test unescape_latex converts Unicode Greek to LaTeX commands"""
+        assert unescape_latex("τ") == r"\tau"
+        assert unescape_latex("α") == r"\alpha"
+        assert unescape_latex("β") == r"\beta"
+        assert unescape_latex("γ") == r"\gamma"
+        assert unescape_latex("δ") == r"\delta"
+        assert unescape_latex("π") == r"\pi"
+        assert unescape_latex("μ") == r"\mu"
+        assert unescape_latex("σ") == r"\sigma"
+        assert unescape_latex("ω") == r"\omega"
+        # Uppercase
+        assert unescape_latex("Γ") == r"\Gamma"
+        assert unescape_latex("Δ") == r"\Delta"
+        assert unescape_latex("Σ") == r"\Sigma"
+        # Mixed with other content
+        assert unescape_latex("Time constant τ") == r"Time constant \tau"
+        assert unescape_latex("α + β = γ") == r"\alpha + \beta = \gamma"
 
 
 class TestComprehensive:
